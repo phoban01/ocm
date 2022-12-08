@@ -18,9 +18,6 @@ func ResolveReferencePath(cv ocm.ComponentVersionAccess, path []metav1.Identity,
 		return nil, fmt.Errorf("no component version specified")
 	}
 	for _, cr := range path {
-		if eff != cv {
-			defer eff.Close()
-		}
 		compundResolver := ocm.NewCompoundResolver(eff.Repository(), resolver)
 		cref, err := cv.GetReference(cr)
 		if err != nil {
