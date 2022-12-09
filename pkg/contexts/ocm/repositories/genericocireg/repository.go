@@ -165,7 +165,7 @@ func (r *RepositoryImpl) LookupComponentVersion(name string, version string) (cp
 	if err != nil {
 		return nil, err
 	}
-	defer c.Close()
+	//defer c.Close()
 	return c.LookupVersion(version)
 }
 

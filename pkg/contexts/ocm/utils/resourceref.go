@@ -10,7 +10,6 @@ import (
 	"github.com/open-component-model/ocm/pkg/contexts/ocm"
 	metav1 "github.com/open-component-model/ocm/pkg/contexts/ocm/compdesc/meta/v1"
 	"github.com/open-component-model/ocm/pkg/errors"
-	"github.com/open-component-model/ocm/pkg/utils"
 )
 
 func ResolveReferencePath(cv ocm.ComponentVersionAccess, path []metav1.Identity, resolver ocm.ComponentVersionResolver) (ocm.ComponentVersionAccess, error) {
@@ -22,15 +21,11 @@ func ResolveReferencePath(cv ocm.ComponentVersionAccess, path []metav1.Identity,
 		return nil, err
 	}
 
-	var final utils.Finalizer
-	defer final.Finalize()
-
 	for _, cr := range path {
-		final.Close(eff)
 		compoundResolver := ocm.NewCompoundResolver(eff.Repository(), resolver)
 		cref, err := eff.GetReference(cr)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get reference when resolving path: %w", err)
 		}
 
 		eff, err = compoundResolver.LookupComponentVersion(cref.GetComponentName(), cref.GetVersion())
@@ -40,7 +35,6 @@ func ResolveReferencePath(cv ocm.ComponentVersionAccess, path []metav1.Identity,
 		if eff == nil {
 			return nil, errors.ErrNotFound(ocm.KIND_COMPONENTREFERENCE, cref.String())
 		}
-		final.Finalize()
 	}
 	return eff, nil
 }
@@ -93,12 +87,12 @@ func ResolveResourceReference(cv ocm.ComponentVersionAccess, ref metav1.Resource
 
 	eff, err := ResolveReferencePath(cv, ref.ReferencePath, resolver)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to resolve reference: %w", err)
 	}
 	r, err := eff.GetResource(ref.Resource)
 	if err != nil {
 		eff.Close()
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to get resource: %w", err)
 	}
 	return r, eff, nil
 }
