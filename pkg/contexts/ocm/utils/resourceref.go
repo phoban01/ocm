@@ -6,6 +6,7 @@ package utils
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/open-component-model/ocm/pkg/contexts/ocm"
 	metav1 "github.com/open-component-model/ocm/pkg/contexts/ocm/compdesc/meta/v1"
@@ -18,7 +19,7 @@ func ResolveReferencePath(cv ocm.ComponentVersionAccess, path []metav1.Identity,
 	}
 	eff, err := cv.Dup()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to call DUP: %w", err)
 	}
 
 	for _, cr := range path {
@@ -36,6 +37,7 @@ func ResolveReferencePath(cv ocm.ComponentVersionAccess, path []metav1.Identity,
 			return nil, errors.ErrNotFound(ocm.KIND_COMPONENTREFERENCE, cref.String())
 		}
 	}
+	log.Println("THIS FUCKING WORKED: ", eff.GetName())
 	return eff, nil
 }
 

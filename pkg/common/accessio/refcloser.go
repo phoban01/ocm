@@ -39,7 +39,7 @@ func (r *referencableCloser) Closer() io.Closer {
 func (r *referencableCloser) View(main ...bool) (CloserView, error) {
 	err := r.Ref()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get ref: %w", err)
 	}
 	v := &view{ref: r}
 	for _, b := range main {

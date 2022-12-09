@@ -5,6 +5,7 @@
 package genericocireg
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/open-component-model/ocm/pkg/common/accessio"
@@ -112,11 +113,11 @@ func (c *componentAccessImpl) ListVersions() ([]string, error) {
 }
 
 func (c *componentAccessImpl) LookupVersion(version string) (cpi.ComponentVersionAccess, error) {
-	v, err := c.View(false)
+	_, err := c.View(false)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get view: %w", err)
 	}
-	defer v.Close()
+	//defer v.Close()
 	acc, err := c.namespace.GetArtifact(version)
 	if err != nil {
 		if errors.IsErrNotFound(err) {
