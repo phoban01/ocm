@@ -6,10 +6,7 @@ builds:
       binary: ocm
       main: ./cmds/ocm/main.go
       ldflags:
-        - -s -w
-        - -X github.com/open-component-model/ocm/pkg/version.gitVersion={{.Version}}
-        - -X github.com/open-component-model/ocm/pkg/version.gitCommit={{.Commit}}
-        - -X github.com/open-component-model/ocm/pkg/version.buildDate={{.CommitDate}}
+        - -s -w -X github.com/open-component-model/ocm/pkg/version.gitVersion={{.Version}} -X github.com/open-component-model/ocm/pkg/version.gitCommit={{.Commit}} -X github.com/open-component-model/ocm/pkg/version.buildDate={{.CommitDate}}
       env:
         - CGO_ENABLED=0
     id: linux
@@ -71,14 +68,3 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-brews:
-  - name: ocm
-    tap:
-      owner: open-component-model
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    folder: Formula
-    homepage: "https://ocm.software/"
-    description: "The OCM CLI makes it easy to create component versions and embed them in build processes."
-    test: |
-      system "#{bin}/ocm --version"
