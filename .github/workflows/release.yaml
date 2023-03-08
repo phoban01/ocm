@@ -25,6 +25,14 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version-file: '${{ github.workspace }}/go.mod'
+    - name: Setup Syft
+      uses: anchore/sbom-action/download-syft@07978da4bdb4faa726e52dfc6b1bed63d4b56479 # v0.13.3
+    - name: Setup Cosign
+      uses: sigstore/cosign-installer@9becc617647dfa20ae7b1151972e9b3a2c338a2b # v2.8.1
+    - name: Setup git config
+      run: |
+        git config user.name "GitHub Actions Bot"
+        git config user.email "<41898282+github-actions[bot]@users.noreply.github.com>"
     - name: Cache go-build and mod
       uses: actions/cache@v3
       with:
@@ -37,13 +45,16 @@ jobs:
     - name: Set release version
       run: |
         if ${{ inputs.release_candidate }}; then
-          echo "RELEASE_VERSION=$(go run $GITHUB_WORKSPACE/pkg/version/generate/release_generate.go print-rc-version)" >> $GITHUB_ENV
+          RELEASE_VERSION=$(go run $GITHUB_WORKSPACE/pkg/version/generate print-rc-version)
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
         else
-          echo "RELEASE_VERSION=$(go run $GITHUB_WORKSPACE/pkg/version/generate/release_generate.go print-version)" >> $GITHUB_ENV
+          RELEASE_VERSION=$(go run $GITHUB_WORKSPACE/pkg/version/generate print-version)
         fi
+        echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
     - name: Set release notes file
       run: |
-        echo "RELEASE_NOTES_FILE=docs/releasenotes/$(go run $GITHUB_WORKSPACE/pkg/version/generate/release_generate.go print-version).md" >> $GITHUB_ENV
+        RELEASE_NOTES_FILE=docs/releasenotes/$(go run $GITHUB_WORKSPACE/pkg/version/generate print-version).md"
+        echo "RELEASE_NOTES_FILE=$RELEASE_NOTES_FILE" >> $GITHUB_ENV
     - name: Validate release notes
       run: |
         if [[ ! -f ${{ env.RELEASE_NOTES_FILE }} ]]; then
@@ -62,10 +73,6 @@ jobs:
             git checkout ${RELEASE_BRANCH}
             git pull --ff-only origin ${RELEASE_BRANCH}
         fi
-    - name: Setup git config
-      run: |
-        git config user.name "GitHub Actions Bot"
-        git config user.email "<41898282+github-actions[bot]@users.noreply.github.com>"
     - name: Create and push tag
       run: |
         msg="Release ${{ env.RELEASE_VERSION }}"
