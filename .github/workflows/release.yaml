@@ -3,6 +3,16 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
+      releaseType:
+        type: choice
+        description: "Release Type"
+        required: true
+        type: choice
+        default: "patch"
+        options:
+        - patch
+        - minor
+        - major
       release_candidate:
         type: boolean
         description: "Release Candidate"
@@ -13,6 +23,9 @@ jobs:
   release:
     name: Trigger release build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      repository-projects: read
     steps:
     - name: Checkout
       uses: actions/checkout@v3
