@@ -58,6 +58,7 @@ jobs:
       run: cd /tmp && curl -sSL ${GH_REL_URL} | tar xz && sudo mv github-release-notes /usr/local/bin/
     - name: Generate release notes
       run: |
+        mkdir -p ./output/nodes.md
         NOTES="./output/notes.md"
         echo '## Changelog' > ${NOTES}
         github-release-notes -org open-component-model -repo ocm -since-latest-release -include-author >> ${NOTES}
