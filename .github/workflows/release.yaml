@@ -46,8 +46,10 @@ jobs:
     - name: Set release version
       run: |
         if ${{ inputs.release_candidate }}; then
+          go run $GITHUB_WORKSPACE/pkg/version/bump --type ${{ inputs.releaseType }} --pre
           echo "RELEASE_VERSION=$(go run $GITHUB_WORKSPACE/pkg/version/generate/release_generate.go print-rc-version)" >> $GITHUB_ENV
         else
+          go run $GITHUB_WORKSPACE/pkg/version/bump --type ${{ inputs.releaseType }}
           echo "RELEASE_VERSION=$(go run $GITHUB_WORKSPACE/pkg/version/generate/release_generate.go print-version)" >> $GITHUB_ENV
         fi
     - name: Set release notes file
