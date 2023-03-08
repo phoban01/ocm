@@ -7,7 +7,7 @@ package version
 import "fmt"
 
 // ReleaseVersion is the version number in semver format "vX.Y.Z", prefixed with "v".
-var ReleaseVersion = "v0.1.0"
+var ReleaseVersion = "v0.2.0"
 
 // ReleaseCandidateNumber is used to auto-increment pre-releases
 var ReleaseCandidateNumber = 0
