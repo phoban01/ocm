@@ -3,15 +3,6 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      releaseType:
-        type: choice
-        description: "Release Type"
-        required: true
-        default: "patch"
-        options:
-        - patch
-        - minor
-        - major
       release_candidate:
         type: boolean
         description: "Release Candidate"
@@ -19,6 +10,11 @@ on:
         default: false
 
 jobs:
+  lint-and-test:
+    uses: ./.github/workflows/lint_and_test.yaml
+    permissions:
+      contents: read
+      pull-requests: read
   release:
     name: Trigger release build
     runs-on: ubuntu-latest
@@ -30,12 +26,10 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
-
     - name: Setup Go
       uses: actions/setup-go@v3
       with:
         go-version-file: '${{ github.workspace }}/go.mod'
-
     - name: Cache go-build and mod
       uses: actions/cache@v3
       with:
@@ -45,28 +39,22 @@ jobs:
         key: go-${{ hashFiles('go.sum') }}
         restore-keys: |
           go-
-
     - name: Set release version
       run: |
         if ${{ inputs.release_candidate }}; then
-          go run $GITHUB_WORKSPACE/pkg/version/bump --type ${{ inputs.releaseType }} --pre
           echo "RELEASE_VERSION=$(go run $GITHUB_WORKSPACE/pkg/version/generate/release_generate.go print-rc-version)" >> $GITHUB_ENV
         else
-          go run $GITHUB_WORKSPACE/pkg/version/bump --type ${{ inputs.releaseType }}
           echo "RELEASE_VERSION=$(go run $GITHUB_WORKSPACE/pkg/version/generate/release_generate.go print-version)" >> $GITHUB_ENV
         fi
-
-    - name: Download release notes utility
-      env:
-        GH_REL_URL: https://github.com/buchanae/github-release-notes/releases/download/0.2.0/github-release-notes-linux-amd64-0.2.0.tar.gz
-      run: cd /tmp && curl -sSL ${GH_REL_URL} | tar xz && sudo mv github-release-notes /usr/local/bin/
-    - name: Generate release notes
+    - name: Set release notes file
       run: |
-        mkdir -p ./output/nodes.md
-        NOTES="./output/notes.md"
-        echo '## Changelog' > ${NOTES}
-        github-release-notes -org open-component-model -repo ocm -since-latest-release -include-author >> ${NOTES}
-
+        echo "RELEASE_NOTES_FILE=docs/releasenotes/$(go run $GITHUB_WORKSPACE/pkg/version/generate/release_generate.go print-version).md" >> $GITHUB_ENV
+    - name: Validate release notes
+      run: |
+        if [[ ! -f ${{ env.RELEASE_NOTES_FILE }} ]]; then
+          >&2 echo "Must have release notes ${{ env.RELEASE_NOTES_FILE }}"
+          exit 6
+        fi
     - name: Create and push branch
       env:
         RELEASE_BRANCH: release-${{ env.RELEASE_VERSION }}
@@ -79,24 +67,30 @@ jobs:
             git checkout ${RELEASE_BRANCH}
             git pull --ff-only origin ${RELEASE_BRANCH}
         fi
-
     - name: Setup git config
       run: |
-        git config user.name "ocm-release-bot"
+        git config user.name "GitHub Actions Bot"
         git config user.email "<41898282+github-actions[bot]@users.noreply.github.com>"
-
     - name: Create and push tag
       run: |
         msg="Release ${{ env.RELEASE_VERSION }}"
         git tag --annotate --message "${msg}" ${{ env.RELEASE_VERSION }}
         git push origin ${{ env.RELEASE_VERSION }}
-
     - name: Run goreleaser
       uses: goreleaser/goreleaser-action@v4
       with:
         distribution: goreleaser
         version: latest
-        args: release --skip-validate --config=./.goreleaser.yaml --release-notes=./output/notes.md
+        args: release --rm-dist --timeout 60m --skip-validate --config=./.goreleaser.yaml --release-notes=${{ env.RELEASE_NOTES_FILE }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.EVENT_API }}
         GORELEASER_CURRENT_TAG: ${{ env.RELEASE_VERSION }}
+    - name: Repository Dispatch
+      if: inputs.release_candidate == false
+      uses: peter-evans/repository-dispatch@v2
+      with:
+        token: ${{ secrets.EVENT_API }}
+        repository: open-component-model/ocm-website
+        event-type: ocm-cli-release
+        client-payload: '{"tag": "${{ env.RELEASE_VERSION }}"}'
