@@ -52,15 +52,15 @@ jobs:
           go run $GITHUB_WORKSPACE/pkg/version/bump --type ${{ inputs.releaseType }}
           echo "RELEASE_VERSION=$(go run $GITHUB_WORKSPACE/pkg/version/generate/release_generate.go print-version)" >> $GITHUB_ENV
         fi
-    - name: Set release notes file
+    - name: Download release notes utility
+      env:
+        GH_REL_URL: https://github.com/buchanae/github-release-notes/releases/download/0.2.0/github-release-notes-linux-amd64-0.2.0.tar.gz
+      run: cd /tmp && curl -sSL ${GH_REL_URL} | tar xz && sudo mv github-release-notes /usr/local/bin/
+    - name: Generate release notes
       run: |
-        echo "RELEASE_NOTES_FILE=docs/releasenotes/$(go run $GITHUB_WORKSPACE/pkg/version/generate/release_generate.go print-version).md" >> $GITHUB_ENV
-    - name: Validate release notes
-      run: |
-        if [[ ! -f ${{ env.RELEASE_NOTES_FILE }} ]]; then
-          >&2 echo "Must have release notes ${{ env.RELEASE_NOTES_FILE }}"
-          exit 6
-        fi
+        NOTES="./output/notes.md"
+        echo '## Changelog' > ${NOTES}
+        github-release-notes -org open-component-model -repo ocm -since-latest-release -include-author >> ${NOTES}
     - name: Create and push branch
       env:
         RELEASE_BRANCH: release-${{ env.RELEASE_VERSION }}
@@ -87,7 +87,7 @@ jobs:
       with:
         distribution: goreleaser
         version: latest
-        args: release --clean --timeout 60m --skip-validate --config=./.goreleaser.yaml --release-notes=${{ env.RELEASE_NOTES_FILE }}
+        args: release --config=./.goreleaser.yaml --release-notes=./output/notes.md
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GORELEASER_CURRENT_TAG: ${{ env.RELEASE_VERSION }}
