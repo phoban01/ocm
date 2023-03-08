@@ -1,5 +1,3 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
 before:
   hooks:
     - go mod tidy
@@ -8,7 +6,10 @@ builds:
       binary: ocm
       main: ./cmds/ocm/main.go
       ldflags:
-        - -s -w -X main.VERSION={{ .Version }}
+        - -s -w
+        - -X github.com/open-component-model/ocm/pkg/version.gitVersion={{.Version}}
+        - -X github.com/open-component-model/ocm/pkg/version.gitCommit={{.Commit}}
+        - -X github.com/open-component-model/ocm/pkg/version.buildDate={{.CommitDate}}
       env:
         - CGO_ENABLED=0
     id: linux
@@ -44,10 +45,26 @@ archives:
     format: zip
     files:
       - none*
-checksum:
-  name_template: 'checksums.txt'
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+source:
+  enabled: true
+  name_template: '{{ .ProjectName }}_{{ .Version }}_source_code'
+sboms:
+  - id: source
+    artifacts: source
+    documents:
+      - "{{ .ProjectName }}_{{ .Version }}_sbom.spdx.json"
+signs:
+  - cmd: cosign
+    env:
+      - COSIGN_EXPERIMENTAL=1
+    certificate: '${artifact}.pem'
+    args:
+      - sign-blob
+      - '--output-certificate=${certificate}'
+      - '--output-signature=${signature}'
+      - '${artifact}'
+    artifacts: checksum
+    output: true
 changelog:
   sort: asc
   filters:
